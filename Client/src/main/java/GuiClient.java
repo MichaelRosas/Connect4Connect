@@ -19,6 +19,7 @@ public class GuiClient extends Application {
 	private GridPane gameBoard;
 	private Label statusLabel;
 	private Button restartButton;
+	private ListView<String> lobbyPlayerList;
 
 	private String username;
 	private String opponent;
@@ -29,6 +30,7 @@ public class GuiClient extends Application {
 	private Client clientConnection;
 	private Stage primaryStage;
 	private Scene loginScene;
+	private Scene lobbyScene;
 	private Scene gameScene;
 
 	public static void main(String[] args) {
@@ -41,6 +43,7 @@ public class GuiClient extends Application {
 		primaryStage.setTitle("Connect 4");
 
 		createLoginScene();
+		createLobbyScene();
 		createGameScene();
 		setupClientConnection();
 
@@ -79,6 +82,69 @@ public class GuiClient extends Application {
 
 		loginLayout.getChildren().addAll(titleLabel, new Label("Enter your username:"), usernameField, loginButton, errorLabel);
 		loginScene = new Scene(loginLayout, 350, 300);
+	}
+
+	private void createLobbyScene() {
+		BorderPane lobbyLayout = new BorderPane();
+		lobbyLayout.setPadding(new Insets(20));
+		lobbyLayout.setStyle("-fx-background-color: #f0f8ff;");
+
+		Label titleLabel = new Label("Game Lobby");
+		titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #0066cc;");
+		BorderPane.setAlignment(titleLabel, Pos.CENTER);
+		BorderPane.setMargin(titleLabel, new Insets(10));
+		lobbyLayout.setTop(titleLabel);
+
+		VBox centerBox = new VBox(10);
+		centerBox.setAlignment(Pos.CENTER);
+
+		Label instructionLabel = new Label("Select a player to challenge:");
+		instructionLabel.setStyle("-fx-font-size: 14px;");
+
+		lobbyPlayerList = new ListView<>();
+		lobbyPlayerList.setPrefHeight(300);
+		lobbyPlayerList.setPrefWidth(300);
+
+		lobbyPlayerList.setCellFactory(param -> new ListCell<String>() {
+			private Button challengeButton = new Button("Challenge");
+
+			{
+				challengeButton.setStyle("-fx-background-color: #0066cc; -fx-text-fill: white;");
+				challengeButton.setOnAction(e -> {
+					String selectedPlayer = getItem();
+					if (selectedPlayer != null) {
+						clientConnection.send(new Message(MessageType.CHALLENGE_REQUEST, username, selectedPlayer));
+					}
+				});
+			}
+
+			@Override
+			protected void updateItem(String player, boolean empty) {
+				super.updateItem(player, empty);
+				if (empty || player == null) {
+					setText(null);
+					setGraphic(null);
+				} else {
+					HBox hbox = new HBox(10);
+					hbox.setAlignment(Pos.CENTER_LEFT);
+					Label playerLabel = new Label(player);
+					playerLabel.setPrefWidth(150);
+					hbox.getChildren().addAll(playerLabel, challengeButton);
+					setGraphic(hbox);
+				}
+			}
+		});
+
+		centerBox.getChildren().addAll(instructionLabel, lobbyPlayerList);
+		lobbyLayout.setCenter(centerBox);
+
+		Label waitingLabel = new Label("Waiting for challenges...");
+		waitingLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+		BorderPane.setAlignment(waitingLabel, Pos.CENTER);
+		BorderPane.setMargin(waitingLabel, new Insets(10));
+		lobbyLayout.setBottom(waitingLabel);
+
+		lobbyScene = new Scene(lobbyLayout, 400, 500);
 	}
 
 	private void createGameScene() {
@@ -181,9 +247,44 @@ public class GuiClient extends Application {
 
 					case LOGIN_SUCCESS:
 						username = data.username;
-						opponent = data.recipient;
 						primaryStage.setTitle("Connect 4: " + username);
-						primaryStage.setScene(gameScene);
+						primaryStage.setScene(lobbyScene);
+						break;
+
+					case LOBBY_UPDATE:
+						if (data.playerList != null) {
+							lobbyPlayerList.getItems().clear();
+							data.playerList.stream()
+								.filter(player -> !player.equals(username))
+								.forEach(player -> lobbyPlayerList.getItems().add(player));
+						}
+						break;
+
+					case CHALLENGE_REQUEST:
+						String challenger = data.username;
+						Platform.runLater(() -> {
+							Alert challengeAlert = new Alert(Alert.AlertType.CONFIRMATION);
+							challengeAlert.setTitle("Challenge Request");
+							challengeAlert.setHeaderText(challenger + " wants to play!");
+							challengeAlert.setContentText("Do you accept the challenge?");
+							
+							challengeAlert.showAndWait().ifPresent(response -> {
+								if (response == ButtonType.OK) {
+									clientConnection.send(new Message(MessageType.CHALLENGE_ACCEPT, username, challenger));
+								} else {
+									clientConnection.send(new Message(MessageType.CHALLENGE_DECLINE, username, challenger));
+								}
+							});
+						});
+						break;
+
+					case CHALLENGE_DECLINE:
+						String decliner = data.username;
+						Alert declineAlert = new Alert(Alert.AlertType.INFORMATION);
+						declineAlert.setTitle("Challenge Declined");
+						declineAlert.setHeaderText("Challenge declined");
+						declineAlert.setContentText(decliner + " declined your challenge.");
+						declineAlert.show();
 						break;
 
 					case LOGIN_ERROR:
@@ -245,19 +346,24 @@ public class GuiClient extends Application {
 						break;
 
 					case NEWUSER:
-						if (opponent == null) {
-							opponent = data.username;
-							chatList.getItems().add("SYSTEM: " + opponent + " has joined the game");
-						}
+						opponent = data.username;
+						chatList.getItems().clear();
+						chatList.getItems().add("SYSTEM: " + opponent + " has joined the game");
+						primaryStage.setScene(gameScene);
 						break;
 
 					case DISCONNECT:
 						opponent = null;
-						statusLabel.setText("Opponent disconnected. Waiting for new opponent...");
-						statusLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: black;");
-						chatList.getItems().add("SYSTEM: Your opponent has disconnected");
 						gameActive = false;
 						restartButton.setDisable(true);
+						
+						Alert disconnectAlert = new Alert(Alert.AlertType.INFORMATION);
+						disconnectAlert.setTitle("Opponent Disconnected");
+						disconnectAlert.setHeaderText("Your opponent has disconnected");
+						disconnectAlert.setContentText("Returning to lobby...");
+						disconnectAlert.showAndWait();
+						
+						primaryStage.setScene(lobbyScene);
 						break;
 				}
 			});

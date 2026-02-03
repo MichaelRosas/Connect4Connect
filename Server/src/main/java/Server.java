@@ -24,13 +24,25 @@ public class Server {
 		server.start();
 	}
 
-	private String findPlayer(String username) {
+	private void broadcastLobbyUpdate() {
+		ArrayList<String> lobbyPlayers = new ArrayList<>();
 		for (String player : usernameToClient.keySet()) {
-			if (!player.equals(username) && !playerPairs.containsKey(player) && !playerPairs.containsValue(player)) {
-				return player;
+			if (!playerPairs.containsKey(player)) {
+				lobbyPlayers.add(player);
 			}
 		}
-		return null;
+		
+		Message lobbyUpdate = new Message(MessageType.LOBBY_UPDATE, lobbyPlayers);
+		
+		for (ClientThread client : clients) {
+			if (client.username != null && !playerPairs.containsKey(client.username)) {
+				try {
+					client.out.writeObject(lobbyUpdate);
+				} catch (Exception e) {
+					System.err.println("Error broadcasting lobby update");
+				}
+			}
+		}
 	}
 
 	private void matchPlayers(String player1, String player2) {
@@ -121,12 +133,50 @@ public class Server {
 							Message loginSuccess = new Message(MessageType.LOGIN_SUCCESS, username);
 							out.writeObject(loginSuccess);
 
-							String opp = findPlayer(username);
-							if (opp != null) {
-								matchPlayers(username, opp);
-							}
+							broadcastLobbyUpdate();
 						} catch (Exception e) {
 							System.err.println("Error logging in");
+						}
+					}
+					break;
+
+				case CHALLENGE_REQUEST:
+					String challenger = message.username;
+					String challenged = message.recipient;
+					
+					if (usernameToClient.containsKey(challenged) && !playerPairs.containsKey(challenged)) {
+						ClientThread challengedClient = usernameToClient.get(challenged);
+						try {
+							Message challengeMsg = new Message(MessageType.CHALLENGE_REQUEST, challenger, challenged);
+							challengedClient.out.writeObject(challengeMsg);
+							callback.accept(new Message(challenger + " challenged " + challenged));
+						} catch (Exception e) {
+							System.err.println("Error sending challenge");
+						}
+					}
+					break;
+
+				case CHALLENGE_ACCEPT:
+					String accepter = message.username;
+					String requestor = message.recipient;
+					
+					if (usernameToClient.containsKey(requestor) && !playerPairs.containsKey(requestor)) {
+						matchPlayers(requestor, accepter);
+						broadcastLobbyUpdate();
+					}
+					break;
+
+				case CHALLENGE_DECLINE:
+					String decliner = message.username;
+					String requester = message.recipient;
+					
+					if (usernameToClient.containsKey(requester)) {
+						ClientThread requesterClient = usernameToClient.get(requester);
+						try {
+							Message declineMsg = new Message(MessageType.CHALLENGE_DECLINE, decliner, requester);
+							requesterClient.out.writeObject(declineMsg);
+						} catch (Exception e) {
+							System.err.println("Error sending decline");
 						}
 					}
 					break;
@@ -268,7 +318,12 @@ public class Server {
 							games.remove(username);
 							games.remove(disconnectedOpponent);
 						}
+						
+						broadcastLobbyUpdate();
 					}
+					break;
+				
+				default:
 					break;
 			}
 		}

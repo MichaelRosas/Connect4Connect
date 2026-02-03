@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.util.List;
 
 public class Message implements Serializable {
     static final long serialVersionUID = 42L;
@@ -9,6 +10,7 @@ public class Message implements Serializable {
     int column;
     int[][] board;
     boolean isPlayerTurn;
+    List<String> playerList;
 
     public Message(String message) {
         this.type = MessageType.SIMPLE;
@@ -43,5 +45,18 @@ public class Message implements Serializable {
         this.type = type;
         this.message = message;
         this.board = finalBoard;
+    }
+
+    // Constructor for lobby player list
+    public Message(MessageType type, List<String> playerList) {
+        this.type = type;
+        this.playerList = playerList;
+    }
+
+    // Constructor for challenge requests
+    public Message(MessageType type, String sender, String recipient) {
+        this.type = type;
+        this.username = sender;
+        this.recipient = recipient;
     }
 }
