@@ -126,7 +126,7 @@ Connect4Connect/
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/Connect4Connect.git
+git clone https://github.com/MichaelRosas/Connect4Connect.git
 cd Connect4Connect
 ```
 
