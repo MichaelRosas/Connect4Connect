@@ -378,7 +378,7 @@ public class GuiClient extends Application {
 						updateGameBoardUI();
 						playWinSound();
 						animateWin();
-						statusLabel.setText("🎉 You Won! 🎉");
+						statusLabel.setText("You Won!");
 						statusLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #FFD700; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 5, 0, 0, 2);");
 						chatList.getItems().add("SYSTEM: You won the game!");
 						gameActive = false;

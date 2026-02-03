@@ -24,14 +24,21 @@ public class Client extends Thread{
 	    	in = new ObjectInputStream(socketClient.getInputStream());
 	    	socketClient.setTcpNoDelay(true);
 		}
-		catch(Exception e) {}
+		catch(Exception e) {
+			System.err.println("Error connecting to server: " + e.getMessage());
+			e.printStackTrace();
+			return;
+		}
 		
 		while(true) {
 			try {
 				Message message = (Message) in.readObject();
 				callback.accept(message);
 			}
-			catch(Exception e) {}
+			catch(Exception e) {
+				System.err.println("Connection to server lost: " + e.getMessage());
+				break;
+			}
 		}
 	
     }

@@ -51,6 +51,7 @@ public class Server {
 
 		Game game = new Game(player1, player2);
 		games.put(player1, game);
+		games.put(player2, game);
 
 		ClientThread client1 = usernameToClient.get(player1);
 		ClientThread client2 = usernameToClient.get(player2);
@@ -118,7 +119,22 @@ public class Server {
 					break;
 
 				case LOGIN:
-					if (usernames.contains(message.username)) {
+					// Validate username
+					if (message.username == null || message.username.trim().isEmpty()) {
+						try {
+							Message loginError = new Message(MessageType.LOGIN_ERROR, "Username cannot be empty");
+							out.writeObject(loginError);
+						} catch (Exception e) {
+							System.err.println("Error sending login error");
+						}
+					} else if (message.username.length() > 20) {
+						try {
+							Message loginError = new Message(MessageType.LOGIN_ERROR, "Username too long (max 20 characters)");
+							out.writeObject(loginError);
+						} catch (Exception e) {
+							System.err.println("Error sending login error");
+						}
+					} else if (usernames.contains(message.username)) {
 						try {
 							Message loginError = new Message(MessageType.LOGIN_ERROR, "Username already taken");
 							out.writeObject(loginError);
@@ -337,20 +353,58 @@ public class Server {
 				System.out.println("Streams not open: " + e.getMessage());
 			}
 
-			while (true) {
-				try {
-					Message data = (Message) in.readObject();
-					if (data.type == MessageType.LOGIN) {
-						if (!usernames.contains(data.username)) {
+			try {
+				while (true) {
+					try {
+						Message data = (Message) in.readObject();
+						if (data.type == MessageType.LOGIN) {
+							if (!usernames.contains(data.username)) {
+								callback.accept(data);
+							}
+						} else {
 							callback.accept(data);
 						}
-					} else {
-						callback.accept(data);
+						updateClients(data);
+					} catch (Exception e) {
+						System.err.println("Client disconnected: " + e.getMessage());
+						break;
 					}
-					updateClients(data);
+				}
+			} finally {
+				// Clean up resources
+				clients.remove(this);
+				try {
+					if (in != null) in.close();
+					if (out != null) out.close();
+					if (connection != null) connection.close();
 				} catch (Exception e) {
-					clients.remove(this);
-					break;
+					System.err.println("Error closing resources: " + e.getMessage());
+				}
+				
+				// Handle disconnect for logged in users
+				if (username != null) {
+					usernames.remove(username);
+					usernameToClient.remove(username);
+					
+					String disconnectedOpponent = playerPairs.get(username);
+					if (disconnectedOpponent != null) {
+						ClientThread opponentClient = usernameToClient.get(disconnectedOpponent);
+						if (opponentClient != null) {
+							try {
+								Message userLeft = new Message(MessageType.DISCONNECT, username);
+								opponentClient.out.writeObject(userLeft);
+							} catch (Exception e) {
+								System.err.println("Error notifying opponent of disconnect");
+							}
+						}
+						
+						playerPairs.remove(username);
+						playerPairs.remove(disconnectedOpponent);
+						games.remove(username);
+						games.remove(disconnectedOpponent);
+					}
+					
+					broadcastLobbyUpdate();
 				}
 			}
 		}
