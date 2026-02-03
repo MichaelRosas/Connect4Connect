@@ -24,8 +24,10 @@ public class Server {
 		server.start();
 	}
 
+	// Send updated list of available players to all clients in lobby
 	private void broadcastLobbyUpdate() {
 		ArrayList<String> lobbyPlayers = new ArrayList<>();
+		// Only include players who are not currently in a game
 		for (String player : usernameToClient.keySet()) {
 			if (!playerPairs.containsKey(player)) {
 				lobbyPlayers.add(player);
@@ -45,10 +47,12 @@ public class Server {
 		}
 	}
 
+	// Pair two players together and initialize their game
 	private void matchPlayers(String player1, String player2) {
 		playerPairs.put(player1, player2);
 		playerPairs.put(player2, player1);
 
+		// Store game instance for both players to prevent null lookups
 		Game game = new Game(player1, player2);
 		games.put(player1, game);
 		games.put(player2, game);
@@ -198,6 +202,7 @@ public class Server {
 					break;
 
 				case GAME_MOVE:
+					// Process game move and check for win/draw conditions
 					String opp = playerPairs.get(username);
 					if (opp != null) {
 						Game game = games.get(username);
@@ -206,6 +211,7 @@ public class Server {
 						}
 
 						if (game != null) {
+							// Validate move (correct turn, valid column, space available)
 							boolean validMove = game.makeMove(username, message.column);
 
 							if (validMove) {
@@ -265,6 +271,7 @@ public class Server {
 					break;
 
 				case GAME_RESTART:
+					// Handle rematch requests - both players must agree before restarting
 					String opponent = playerPairs.get(username);
 					if (opponent != null) {
 						Game game;
@@ -277,6 +284,7 @@ public class Server {
 						if (game != null) {
 							rematchRequests.put(username, true);
 
+							// If both players have requested rematch, reset the game
 							if (rematchRequests.containsKey(opponent) && rematchRequests.get(opponent)) {
 								game.reset();
 
@@ -371,7 +379,8 @@ public class Server {
 					}
 				}
 			} finally {
-				// Clean up resources
+				// Clean up resources and notify opponent of disconnect
+				// This runs whether client disconnects gracefully or abruptly
 				clients.remove(this);
 				try {
 					if (in != null) in.close();
@@ -381,7 +390,7 @@ public class Server {
 					System.err.println("Error closing resources: " + e.getMessage());
 				}
 				
-				// Handle disconnect for logged in users
+				// Clean up player state and notify opponent if in a game
 				if (username != null) {
 					usernames.remove(username);
 					usernameToClient.remove(username);

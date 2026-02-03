@@ -293,8 +293,10 @@ public class GuiClient extends Application {
 		}
 	}
 
+	// Set up client-server connection and handle incoming messages
 	private void setupClientConnection() {
 		clientConnection = new Client(data -> {
+			// Route messages to UI thread for safe GUI updates
 			Platform.runLater(() -> {
 				switch (data.type) {
 					case SIMPLE:
@@ -317,6 +319,7 @@ public class GuiClient extends Application {
 						break;
 
 					case CHALLENGE_REQUEST:
+						// Show modal dialog for incoming challenge (blocks until user responds)
 						String challenger = data.username;
 						Platform.runLater(() -> {
 							Alert challengeAlert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -356,6 +359,7 @@ public class GuiClient extends Application {
 						break;
 
 					case GAME_STATE:
+						// Sync board state from server and update UI
 						int[][] oldBoard = copyBoard(board);
 						board = data.board;
 						myTurn = data.isPlayerTurn;
@@ -479,6 +483,7 @@ public class GuiClient extends Application {
 		return copy;
 	}
 
+	// Animate piece drop with physics effect (prevents rapid clicking during animation)
 	private void animateBoardUpdate(int[][] oldBoard, int[][] newBoard) {
 		animating = true;
 		

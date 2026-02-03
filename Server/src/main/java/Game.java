@@ -13,11 +13,14 @@ public class Game {
         this.gameActive = true;
     }
 
+    // Attempt to place a piece in the specified column
+    // Returns false if move is invalid (wrong turn, full column, or out of bounds)
     public boolean makeMove(String player, int column) {
         if (!gameActive || !player.equals(currentPlayer) || column < 0 || column >= 7) {
             return false;
         }
 
+        // Find lowest available row in the column (gravity effect)
         int row = -1;
         for (int r = 5; r >= 0; r--) {
             if (board[r][column] == 0) {
@@ -66,7 +69,7 @@ public class Game {
             }
         }
 
-        // diagonal1
+        // diagonal1 (top-left to bottom-right)
         for (int r = 0; r <= 2; r++) {
             for (int c = 0; c <= 3; c++) {
                 if (board[r][c] != 0 && board[r][c] == board[r+1][c+1] && board[r][c] == board[r+2][c+2] && board[r][c] == board[r+3][c+3]) {
@@ -75,7 +78,7 @@ public class Game {
             }
         }
 
-        // diagonal2
+        // diagonal2 (bottom-left to top-right)
         for (int r = 3; r < 6; r++) {
             for (int c = 0; c <= 3; c++) {
                 if (board[r][c] != 0 && board[r][c] == board[r-1][c+1] && board[r][c] == board[r-2][c+2] && board[r][c] == board[r-3][c+3]) {
