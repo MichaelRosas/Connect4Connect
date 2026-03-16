@@ -99,7 +99,7 @@ Connect4Connect/
 
 **Game.java** - Core game engine:
 - 6x7 board representation (2D integer array)
-- Move validation (turn checking, gravity simulation)
+- Move validation (turn checking)
 - Win detection (4 directions: horizontal, vertical, 2 diagonals)
 - Draw detection (full board check)
 - Turn management and game state control
@@ -160,7 +160,7 @@ mvn javafx:run
 
 Launch multiple client instances to simulate different players. Each client connects to `localhost:5555`.
 
-## 🎮 How to Play
+## How to Play
 
 1. **Login**: Enter a unique username (1-20 characters)
 2. **Lobby**: Browse the list of available players
