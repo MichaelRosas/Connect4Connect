@@ -2,11 +2,11 @@
 
 A real-time multiplayer Connect-4 game featuring a modern JavaFX interface, lobby-based matchmaking, and live chat functionality. Challenge friends or other players in this classic strategy game with smooth animations and responsive gameplay.
 
-## 📋 Overview
+## Overview
 
 Connect4Connect is a client-server application that enables multiple players to compete in Connect-4 matches through an intuitive graphical interface. Players can browse available opponents in a lobby, send challenges, and engage in real-time games with built-in chat support.
 
-## ✨ Key Features
+## Key Features
 
 ### Gameplay
 
@@ -39,7 +39,7 @@ Connect4Connect is a client-server application that enables multiple players to 
 - **Disconnect Handling**: Graceful cleanup and opponent notification on disconnection
 - **Resource Management**: Proper socket and stream cleanup prevents memory leaks
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Core Technologies
 
@@ -61,7 +61,7 @@ Connect4Connect is a client-server application that enables multiple players to 
 - **State Management** - Synchronized game state across clients
 - **Message-based Protocol** - Typed messages for different operations
 
-## 🏗️ Project Architecture
+## Project Architecture
 
 ```
 Connect4Connect/
@@ -113,7 +113,7 @@ Connect4Connect/
 - `TEXT` - Chat messages
 - `DISCONNECT` - Player leaving
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -209,7 +209,7 @@ mvn clean               # Clean build artifacts
 mvn compile             # Compile source code
 ```
 
-## 🔐 Network Protocol
+## Network Protocol
 
 ### Connection Flow
 
